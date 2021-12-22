@@ -2,9 +2,22 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>File(s) xd</title>
+  <title>xd(s) xd</title>
 </head>
-<img class="profile-pic" src="http://cdn.cutestpaw.com/wp-content/uploads/2012/07/l-Wittle-puppy-yawning.jpg" />
-<div class="upload-button">Upload Image</div>
-<input class="file-upload" type="file" accept="/teszt/image/*"/>
-<h1>Hi<h1>
+<style>
+ input {
+    display: block;
+    visibility: hidden;
+    width: 0;
+    height: 0;
+}
+</style>
+
+<input type="file" name="somename" size="chars">
+<button>Choose File</button>
+
+<script>
+$('button').click(function(){
+    $('input').click();
+});
+</script>
