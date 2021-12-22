@@ -1,0 +1,205 @@
+public class JSONParserFile {
+
+    /**
+     * save JSON file in database
+     * @param file
+     * @param tableName
+     * @throws Exception
+     */
+    public void saveFile(MultipartFile file,String tableName) throws Exception {
+
+
+        // get connection 
+        Connection dbConnection = DB_Connection.getConnection();
+
+        StringBuilder sbCreateTable = new StringBuilder( 1024 );
+
+        JSONParserFile jsonParser=new JSONParserFile();
+
+
+        List<String> listColumns=jsonParser.getTableColumns(file);
+
+        //get size columns  
+        int sizeColumns=listColumns.size();
+
+        // check if colunms not emptm then append statement 
+        if (!listColumns.isEmpty() ) { 
+            sbCreateTable.append( "Create table " ).append( tableName.replaceAll(" ", "_").replaceAll("\'", "") ).append( " ( " );
+        }
+
+        //for loop colunms 
+        for ( int i = 0; i < listColumns.size(); i ++ ) {
+
+            sbCreateTable.append(listColumns.get(i).replaceAll(" ", "_"));
+            sbCreateTable.append(" VARCHAR(255)");
+
+            if(listColumns.size()-1!=i) {
+                sbCreateTable.append(",");
+            }
+
+        }
+
+        if ( listColumns.size() > 0 ) { 
+            sbCreateTable.append(" )");
+        }
+
+        //create table 
+        jsonParser.createTable(sbCreateTable,dbConnection);
+
+
+        //insert records in table 
+        jsonParser.getRecordsInsert(dbConnection,file,sizeColumns,tableName);
+
+
+    }
+
+
+    /**
+     * get table columns from json Object 
+     * @param file
+     * @return
+     */
+    List<String> getTableColumns(MultipartFile file){
+        List<String> columns=new ArrayList<String>();
+
+        JSONParser parser = new JSONParser();
+
+        //parse json objet file
+        JSONObject obj;
+        try {
+
+            //parse JSON object 
+            obj = (JSONObject )parser.parse(new InputStreamReader(file.getInputStream(), "UTF-8"));
+
+
+            //get keys object
+            Set<String> keys = obj.keySet();
+
+            //get first keys 
+            String keytList =keys.iterator().next().toString();
+
+            //return list of objects 
+            JSONArray array=(JSONArray)obj.get(keytList);
+
+            //first object 
+            JSONObject tempObject =(JSONObject)array.get(0);
+
+            //GET ATTRIBUTES 
+            Set<String> coulmns = tempObject.keySet();
+            for (String attribute : coulmns) {
+
+                columns.add(attribute);
+            }
+        } catch (UnsupportedEncodingException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (ParseException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return columns;
+    }
+
+    /**
+     * 
+     * create table based file 
+     * @param sb
+     * @param dbConnection
+     */
+    public void createTable(StringBuilder sb,Connection dbConnection){
+        PreparedStatement preparedStatement = null;
+        try {
+            preparedStatement = dbConnection.prepareStatement(sb.toString());
+
+
+            preparedStatement.execute();
+
+        } catch (SQLException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+
+
+
+    /**
+     * insert records excel sheeet in tables 
+     * @param dbConnection
+     * @throws Exception
+     */
+    void getRecordsInsert(Connection dbConnection,MultipartFile file,int sizeColumns ,String tableName) throws Exception{
+        JSONParser parser = new JSONParser();
+
+        StringBuilder sbInsert = new StringBuilder( 1024 );
+        PreparedStatement preparedStatement = null;
+
+        //parse json objet file
+        JSONObject obj;
+        try {
+
+            obj = (JSONObject )parser.parse(new InputStreamReader(file.getInputStream(), "UTF-8"));
+
+            //get keys object
+            Set<String> keys = obj.keySet();
+
+            //get first keys 
+            String keytList =keys.iterator().next().toString();
+
+            //return list of objects 
+            JSONArray array=(JSONArray)obj.get(keytList);
+
+
+            for (Object object : array) {
+                //first object 
+                JSONObject tempObject =(JSONObject)object;
+                //rest 
+                sbInsert.setLength(0);
+
+                sbInsert.append("insert into "+tableName.trim().replaceAll(" ", "_")+" values(");
+                int currentCellLenght=0;
+
+                //GET ATTRIBUTES 
+                Set<String> coulmns = tempObject.keySet();
+                for (String attribute : coulmns) {
+
+                     sbInsert.append("'"+tempObject.get(attribute).toString().replaceAll("\'", "")+"'");
+                       currentCellLenght++;
+
+
+                    //exit when reach last coulumns
+                    if(currentCellLenght==sizeColumns) {
+                        break;
+                    }
+
+                    //add insert rows 
+                    if(currentCellLenght!=sizeColumns) {
+                        sbInsert.append(",");
+                    }
+                }
+                sbInsert.append(")");
+
+                preparedStatement = dbConnection.prepareStatement(sbInsert.toString());
+
+                preparedStatement.execute();
+
+
+            }
+
+
+        } catch (UnsupportedEncodingException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (ParseException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+    }
+
+}
